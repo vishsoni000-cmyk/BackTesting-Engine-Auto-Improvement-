@@ -34,6 +34,7 @@ def test_validation_sorts_and_converts_timestamps_to_utc():
 )
 def test_invalid_numeric_values_are_rejected(column, value):
     frame = candles()
+    frame[column] = frame[column].astype(float)
     frame.loc[0, column] = value
     with pytest.raises(OHLCVValidationError):
         validate_ohlcv(frame)
@@ -48,6 +49,7 @@ def test_duplicate_timestamps_are_rejected():
 
 def test_impossible_high_low_range_is_rejected():
     frame = candles()
+    frame["high"] = frame["high"].astype(float)
     frame.loc[0, "high"] = 10.5
     with pytest.raises(OHLCVValidationError):
         validate_ohlcv(frame)
