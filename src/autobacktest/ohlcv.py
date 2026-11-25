@@ -43,16 +43,16 @@ def validate_ohlcv(frame: pd.DataFrame) -> pd.DataFrame:
         except (TypeError, ValueError) as exc:
             raise OHLCVValidationError(f"{column} values must be numeric") from exc
 
-    numeric = result.loc[:, (*PRICE_COLUMNS, "volume")].to_numpy(dtype=float)
+    numeric = result.loc[:, [*PRICE_COLUMNS, "volume"]].to_numpy(dtype=float)
     if not np.isfinite(numeric).all():
         raise OHLCVValidationError("OHLCV numeric values must all be finite")
-    if (result.loc[:, PRICE_COLUMNS] <= 0).any().any():
+    if (result.loc[:, list(PRICE_COLUMNS)] <= 0).any().any():
         raise OHLCVValidationError("OHLC prices must be strictly positive")
     if (result["volume"] < 0).any():
         raise OHLCVValidationError("volume must be non-negative")
     if (result["high"] < result["low"]).any():
         raise OHLCVValidationError("high must be greater than or equal to low")
-    if (result["high"] < result.loc[:, ("open", "close")].max(axis=1)).any():
+    if (result["high"] < result.loc[:, ["open", "close"]].max(axis=1)).any():
         raise OHLCVValidationError("high must be at least max(open, close)")
     if (result["low"] > result.loc[:, ("open", "close")].min(axis=1)).any():
         raise OHLCVValidationError("low must be at most min(open, close)")
