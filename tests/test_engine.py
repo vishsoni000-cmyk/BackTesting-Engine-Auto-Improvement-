@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from autobacktest.engine import BacktestEngine
+from autobacktest.error_memory import ErrorMemory
 
 
 class FixedSignals:
@@ -64,3 +65,18 @@ def test_invalid_target_positions_are_rejected():
 def test_invalid_engine_configuration_is_rejected(kwargs):
     with pytest.raises(ValueError):
         BacktestEngine(**kwargs)
+
+
+def test_repeated_backtest_errors_are_fingerprinted_and_counted(tmp_path):
+    memory = ErrorMemory(tmp_path / "errors.json")
+    engine = BacktestEngine(error_memory=memory)
+    strategy = FixedSignals([0, 2, 0, 0])
+
+    for _ in range(2):
+        with pytest.raises(ValueError, match="0/1"):
+            engine.run(market_data(), strategy)
+
+    records = memory.all_records()
+    assert len(records) == 1
+    assert records[0]["occurrences"] == 2
+    assert records[0]["context"] == "BacktestEngine.run"

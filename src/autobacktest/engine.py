@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from autobacktest.error_memory import ErrorMemory
 from autobacktest.ohlcv import validate_ohlcv
 from autobacktest.strategies import Strategy
 
@@ -37,6 +38,7 @@ class BacktestEngine:
         initial_cash: float = 10_000.0,
         fee_rate: float = 0.001,
         slippage_rate: float = 0.0005,
+        error_memory: ErrorMemory | None = None,
     ) -> None:
         if not np.isfinite(initial_cash) or initial_cash <= 0:
             raise ValueError("initial_cash must be finite and positive")
@@ -46,8 +48,22 @@ class BacktestEngine:
         self.initial_cash = float(initial_cash)
         self.fee_rate = float(fee_rate)
         self.slippage_rate = float(slippage_rate)
+        self.error_memory = error_memory
 
     def run(self, data: pd.DataFrame, strategy: Strategy) -> BacktestResult:
+        """Run a strategy and safely record failures when error memory is enabled."""
+        try:
+            return self._run(data, strategy)
+        except Exception as exc:
+            if self.error_memory is not None:
+                try:
+                    self.error_memory.record(exc, context="BacktestEngine.run")
+                except Exception:
+                    # Diagnostics must not mask the original exception.
+                    pass
+            raise
+
+    def _run(self, data: pd.DataFrame, strategy: Strategy) -> BacktestResult:
         """Run a strategy over validated candles and return accounting records."""
         frame = validate_ohlcv(data)
         signals = strategy.generate_signals(frame)
