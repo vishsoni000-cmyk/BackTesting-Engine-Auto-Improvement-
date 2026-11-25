@@ -31,7 +31,7 @@ def validate_ohlcv(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
         raise OHLCVValidationError("OHLCV data must contain at least one candle")
 
-    result = frame.loc[:, REQUIRED_COLUMNS].copy()
+    result = frame.loc[:, list(REQUIRED_COLUMNS)].copy()
     try:
         result["timestamp"] = pd.to_datetime(result["timestamp"], utc=True, errors="raise")
     except (TypeError, ValueError) as exc:
@@ -54,7 +54,7 @@ def validate_ohlcv(frame: pd.DataFrame) -> pd.DataFrame:
         raise OHLCVValidationError("high must be greater than or equal to low")
     if (result["high"] < result.loc[:, ["open", "close"]].max(axis=1)).any():
         raise OHLCVValidationError("high must be at least max(open, close)")
-    if (result["low"] > result.loc[:, ("open", "close")].min(axis=1)).any():
+    if (result["low"] > result.loc[:, ["open", "close"]].min(axis=1)).any():
         raise OHLCVValidationError("low must be at most min(open, close)")
 
     result = result.sort_values("timestamp", kind="stable").reset_index(drop=True)
